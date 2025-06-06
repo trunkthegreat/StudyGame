@@ -1,0 +1,19 @@
+{
+  "folders": [
+    {
+      "id": "commercial_manager",
+      "name": "Commerical Manager Handbook",
+      "path": "courses/1-The Commercial Manager"
+    },
+    {
+      "id": "shadow",
+      "name": "Advanced Topics",
+      "path": "courses/2-Shadow"
+    },
+    {
+      "id": "abctest",
+      "name": "ABC Topics",
+      "path": "courses/ABC"
+    }
+  ]
+}
