@@ -1,0 +1,14 @@
+{
+  "courses": [
+    {
+      "id": "test1",
+      "title": "Test1",
+      "filename": "test1.json"
+    },
+    {
+      "id": "test2",
+      "title": "Test2",
+      "filename": "test2.json"
+    }
+  ]
+}
