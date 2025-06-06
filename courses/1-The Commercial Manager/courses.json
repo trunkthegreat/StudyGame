@@ -1,6 +1,26 @@
 {
   "courses": [
     {
+      "id": "C1-en",
+      "title": "1 - Commercial Awareness",
+      "filename": "TCM_C1_en.json"
+    },
+    {
+      "id": "C2-en",
+      "title": "2 - The Contract",
+      "filename": "TCM_C2_en.json"
+    },
+    {
+      "id": "C3-en",
+      "title": "3 - Contract Performance",
+      "filename": "TCM_C3_en.json"
+    },
+    {
+      "id": "C4-en",
+      "title": "4 - Commercial Relationship",
+      "filename": "TCM_C4_en.json"
+    },
+    {
       "id": "C5-en",
       "title": "5 - Negotiation",
       "filename": "TCM_C5_en.json"
