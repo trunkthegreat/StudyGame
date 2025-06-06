@@ -1,0 +1,2827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Game</title>
+    <style>
+        :root {
+            --cbre-dark-forest: #0B3D0B;
+            --cbre-deep-green: #004B23;
+            --cbre-forest-green: #2D5016;
+            --cbre-sage-dark: #2F4F2F;
+            --cbre-accent-gold: #FFD700;
+            --cbre-warm-cream: #F5F5DC;
+            --cbre-soft-beige: #F7F3E9;
+            --cbre-light-sage: #9CAF88;
+            --modern-bg: linear-gradient(135deg, var(--cbre-dark-forest) 0%, var(--cbre-deep-green) 50%, var(--cbre-forest-green) 100%);
+            --modern-surface: rgba(247, 243, 233, 0.1);
+            --modern-surface-elevated: rgba(247, 243, 233, 0.15);
+            --modern-text: var(--cbre-warm-cream);
+            --modern-text-secondary: var(--cbre-soft-beige);
+            --sidebar-width: 300px;
+            --shadow-soft: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --shadow-medium: 0 8px 25px rgba(0, 0, 0, 0.4);
+            --shadow-strong: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            background: var(--modern-bg);
+            min-height: 100vh;
+            color: var(--modern-text);
+            overflow-x: hidden;
+            display: flex;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.03) 50%, transparent 70%),
+                linear-gradient(-45deg, transparent 30%, rgba(255,255,255,0.03) 50%, transparent 70%);
+            background-size: 100px 100px, 150px 150px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--modern-surface);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 200;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            background: var(--modern-surface-elevated);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 201;
+        }
+
+        .sidebar-header h2 {
+            color: var(--cbre-accent-gold);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .course-list {
+            padding: 1rem;
+        }
+
+        .course-item {
+            background: var(--modern-surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .course-item:hover {
+            background: var(--modern-surface-elevated);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .course-item.active {
+            border-color: var(--cbre-orange);
+            background: rgba(255, 107, 53, 0.15);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+        }
+
+        .course-title {
+            font-weight: 600;
+            color: var(--cbre-warm-cream);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .course-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .folder-header {
+            background: var(--modern-surface-elevated);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .folder-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--cbre-accent-gold);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .folder-courses {
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+        }
+
+        .folder-courses.collapsing {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .folder-chevron {
+            font-size: 0.8rem;
+            color: var(--cbre-accent-gold);
+            margin-left: 0.25rem;
+        }
+
+        .course-count {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        /* Enhanced course item styling under folders */
+        .folder-courses .course-item {
+            margin-left: 1rem;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            padding-left: 0.75rem;
+            position: relative;
+        }
+
+        .folder-courses .course-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 50%;
+            width: 8px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%);
+        }
+
+        .course-item {
+            margin-left: 1rem; /* Indent courses under folders */
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            padding-left: 0.75rem;
+        }
+        .progress-bar-mini {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill-mini {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cbre-orange), var(--cbre-red));
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text-mini {
+            font-size: 0.8rem;
+            color: var(--modern-text-secondary);
+            white-space: nowrap;
+        }
+
+        .course-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-not-started {
+            background: var(--cbre-gray);
+            color: white;
+        }
+
+        .status-in-progress {
+            background: var(--cbre-blue);
+            color: white;
+        }
+
+        .status-completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .last-studied {
+            color: var(--cbre-light-blue);
+            font-size: 0.7rem;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            background: var(--modern-surface);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .dashboard h3 {
+            color: var(--cbre-accent-gold);
+            margin-bottom: 1rem;
+            text-align: center;
+            font-weight: 600;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--cbre-accent-gold);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--cbre-warm-cream);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+        }
+
+        .overall-progress {
+            margin-top: 1rem;
+        }
+
+        .overall-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .overall-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+
+        /* Toggle Button */
+        .sidebar-toggle {
+            position: fixed;
+            left: var(--sidebar-width);
+            top: 20px;
+            z-index: 202;
+            background: var(--cbre-orange);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0 12px 12px 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 1.2rem;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .sidebar-toggle.collapsed {
+            left: 10px;
+            border-radius: 12px;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--cbre-red);
+            transform: scale(1.05);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .main-content.sidebar-collapsed {
+            margin-left: 0;
+        }
+
+        .header {
+            background: var(--modern-surface);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 900;
+            color: white;
+            font-family: 'Arial Black', 'Arial', sans-serif;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .progress-container {
+            flex: 1;
+            margin: 0 2rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cbre-accent-gold), #FFA500);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .progress-fill-mini {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cbre-accent-gold), #FFA500);
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .overall-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cbre-accent-gold), #FFB347);
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            text-align: center;
+            color: var(--cbre-warm-cream);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .error-panel {
+            background: rgba(231, 24, 55, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 800px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            display: none;
+            box-shadow: var(--shadow-strong);
+        }
+
+        .error-panel h3 {
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .error-panel p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .retry-btn {
+            background: linear-gradient(45deg, var(--cbre-orange), var(--cbre-red));
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        /* TTS Control Panel */
+        .tts-panel {
+            background: var(--modern-surface);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 1rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .tts-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            color: var(--cbre-orange);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .tts-header .icon {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .tts-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .language-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .lang-btn {
+            background: var(--modern-surface);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .lang-btn.active {
+            background: var(--cbre-orange);
+            border-color: var(--cbre-red);
+            box-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .lang-btn:hover {
+            background: var(--cbre-blue);
+            transform: translateY(-1px);
+        }
+
+        .voice-control, .audio-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .voice-control label, .audio-control label {
+            font-size: 0.9rem;
+            color: var(--modern-text-secondary);
+            font-weight: 500;
+        }
+
+        .voice-select, .audio-slider {
+            background: var(--cbre-deep-green);
+            border: 2px solid var(--cbre-accent-gold);
+            border-radius: 8px;
+            padding: 0.75rem;
+            color: var(--cbre-warm-cream);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .voice-select:focus, .audio-slider:focus {
+            outline: none;
+            border-color: var(--cbre-accent-gold);
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3);
+        }
+
+        .voice-select option {
+            background: var(--cbre-deep-green);
+            color: var(--cbre-warm-cream);
+            padding: 0.5rem;
+        }
+
+        .voice-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .audio-slider {
+            width: 100%;
+            accent-color: var(--cbre-orange);
+        }
+
+        .tts-playback {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .tts-btn {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tts-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .tts-btn:disabled {
+            background: var(--cbre-gray);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .tts-btn.stop {
+            background: linear-gradient(45deg, var(--cbre-red), #dc3545);
+        }
+
+        .tts-status {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--cbre-gray);
+            animation: none;
+        }
+
+        .status-indicator.speaking {
+            background: #10b981;
+            animation: pulse 1.5s infinite;
+        }
+
+        .classroom-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            position: relative;
+        }
+
+        .classroom {
+            background: var(--modern-surface);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: var(--shadow-strong);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .classroom::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05) 0%, transparent 50%), 
+                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .content-board {
+            background: var(--modern-surface-elevated);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            min-height: 600px;
+            position: relative;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-medium);
+            backdrop-filter: blur(10px);
+        }
+
+        .content-board-inner {
+            padding: 2rem;
+            color: var(--modern-text);
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            min-height: 550px;
+        }
+
+        .content-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            animation: fadeInSlide 1s ease;
+            border-bottom: 3px solid var(--cbre-primary-green);
+            padding-bottom: 1rem;
+            font-family: 'Arial Black', 'Arial', sans-serif;
+            letter-spacing: 0.05em;
+        }
+
+        .content-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            animation: typewriter 2s ease;
+            color: var(--modern-text-secondary);
+        }
+
+        .content-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .content-list li {
+            margin: 1rem 0;
+            padding-left: 2rem;
+            position: relative;
+            animation: fadeInUp 0.8s ease forwards;
+            opacity: 0;
+            color: var(--modern-text-secondary);
+        }
+
+        .content-list li:nth-child(1) { animation-delay: 0.2s; }
+        .content-list li:nth-child(2) { animation-delay: 0.4s; }
+        .content-list li:nth-child(3) { animation-delay: 0.6s; }
+        .content-list li:nth-child(4) { animation-delay: 0.8s; }
+        .content-list li:nth-child(5) { animation-delay: 1.0s; }
+        .content-list li:nth-child(6) { animation-delay: 1.2s; }
+        .content-list li:nth-child(7) { animation-delay: 1.4s; }
+        .content-list li:nth-child(8) { animation-delay: 1.6s; }
+
+        .content-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--cbre-orange);
+            font-size: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        .highlight-box {
+            background: rgba(255, 107, 53, 0.15);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            animation: glow 3s ease-in-out infinite alternate;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Interactive Content Buttons */
+        .interactive-content {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .info-button {
+            background: var(--modern-surface-elevated);
+            border: 2px solid var(--cbre-primary-green);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--modern-text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 600;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .info-button:hover {
+            background: var(--cbre-accent-gold);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            color: var(--cbre-dark-forest);
+        }
+
+        .info-button.key-takeaways { 
+            border-color: var(--cbre-light-green); 
+        }
+        .info-button.key-takeaways:hover { 
+            background: var(--cbre-light-green); 
+        }
+
+        .info-button.common-misunderstandings { 
+            border-color: var(--cbre-orange); 
+        }
+        .info-button.common-misunderstandings:hover { 
+            background: var(--cbre-orange); 
+        }
+
+        .info-button.real-life-examples { 
+            border-color: var(--cbre-accent-green); 
+        }
+        .info-button.real-life-examples:hover { 
+            background: var(--cbre-accent-green); 
+        }
+        .info-button.analogies { 
+            border-color: var(--cbre-blue); 
+        }
+        .info-button.analogies:hover { 
+            background: var(--cbre-blue); 
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: var(--cbre-warm-cream);
+            padding: 1.5rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            min-width: 400px;
+            max-width: 600px;
+            width: max-content;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            box-shadow: var(--shadow-strong);
+            line-height: 1.6;
+            border: 2px solid var(--cbre-accent-gold);
+            backdrop-filter: blur(10px);
+            text-align: left;
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: var(--cbre-accent-gold);
+        }
+
+        .info-button:hover .tooltip {
+            opacity: 1;
+        }
+
+        .teacher-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .teacher-avatar {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(45deg, var(--cbre-navy), var(--cbre-blue));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+            box-shadow: var(--shadow-medium);
+            animation: bounce 2s infinite;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--cbre-accent-gold), #FFA500);
+            color: var(--cbre-dark-forest);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-soft);
+            position: relative;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+            background: linear-gradient(45deg, #FFA500, var(--cbre-accent-gold));
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .btn:disabled {
+            background: var(--cbre-gray);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn:disabled:hover {
+            transform: none;
+        }
+
+        .chunk-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .chunk-btn {
+            background: var(--modern-surface);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .chunk-btn.active {
+            background: var(--cbre-orange);
+            border-color: var(--cbre-red);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .chunk-btn:hover {
+            background: var(--cbre-blue);
+            transform: translateY(-2px);
+        }
+
+        .exercise-panel {
+            background: var(--modern-surface);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .exercise-input {
+            width: 100%;
+            min-height: 100px;
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 2px solid var(--cbre-accent-gold);
+            background: var(--cbre-deep-green);
+            color: var(--cbre-warm-cream);
+            font-family: 'Arial', sans-serif;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+
+        .exercise-input:focus {
+            outline: none;
+            border-color: var(--cbre-accent-gold);
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3);
+        }
+
+        .exercise-input::placeholder {
+            color: rgba(247, 243, 233, 0.6);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid var(--cbre-orange);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+            }
+            to {
+                box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --sidebar-width: 250px;
+            }
+
+            .classroom-container {
+                padding: 0 1rem;
+                margin: 1rem auto;
+            }
+
+            .classroom {
+                padding: 1rem;
+            }
+
+            .content-board-inner {
+                padding: 1rem;
+            }
+
+            .content-title {
+                font-size: 1.8rem;
+            }
+
+            .content-text {
+                font-size: 1rem;
+            }
+
+            .tts-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .tts-playback {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .teacher-avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+
+            .interactive-content {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                --sidebar-width: 100%;
+            }
+
+            .sidebar-toggle.collapsed {
+                left: 10px;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .progress-container {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Loading course library...</div>
+    </div>
+
+    <div class="error-panel" id="errorPanel">
+        <h3>⚠️ Unable to Load Course Library</h3>
+        <p>The system couldn't find or load the course files.</p>
+        <p>Please ensure that:</p>
+        <ul style="text-align: left; margin: 1rem 0; padding-left: 2rem;">
+            <li>The <strong>courses.json</strong> manifest file exists in the same folder</li>
+            <li>All course JSON files listed in the manifest exist</li>
+            <li>You're running this from a web server (not directly opening the file)</li>
+        </ul>
+        <button class="retry-btn" onclick="location.reload()">🔄 Retry Loading</button>
+    </div>
+
+    <!-- Sidebar Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle">‹</button>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>📚 Course Library</h2>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <h3>📊 Study Dashboard</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalCourses">0</div>
+                    <div class="stat-label">Total Courses</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="completedCourses">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="inProgressCourses">0</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="totalStudyTime">0h</div>
+                    <div class="stat-label">Study Time</div>
+                </div>
+            </div>
+            <div class="overall-progress">
+                <div style="font-size: 0.9rem; text-align: center; margin-bottom: 0.5rem;">
+                    Overall Progress: <span id="overallPercentage">0%</span>
+                </div>
+                <div class="overall-progress-bar">
+                    <div class="overall-progress-fill" id="overallProgressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course List -->
+        <div class="course-list" id="courseList">
+            <!-- Course items will be populated here -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">TRUNG STUDY GAME</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Select a course to begin</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="classroom-container">
+            <!-- TTS Control Panel -->
+            <div class="tts-panel" id="ttsPanel">
+                <div class="tts-header">
+                    <span class="icon">🔊</span>
+                    Audio Narration Controls
+                </div>
+
+                <div class="tts-controls">
+                    <div class="language-selector">
+                        <button class="lang-btn active" data-lang="en-US">🇺🇸 English</button>
+                        <button class="lang-btn" data-lang="ja-JP">🇯🇵 日本語</button>
+                        <button class="lang-btn" data-lang="vi-VN">🇻🇳 Tiếng Việt</button>
+                    </div>
+
+                    <div class="voice-control">
+                        <label for="voiceSelect">Voice Selection:</label>
+                        <select id="voiceSelect" class="voice-select">
+                            <option>Loading voices...</option>
+                        </select>
+                        <div id="voiceInfo" class="voice-info">Select a voice to see details</div>
+                    </div>
+
+                    <div class="audio-control">
+                        <label for="rateSlider">Speed: <span id="rateValue">1.0x</span></label>
+                        <input type="range" id="rateSlider" class="audio-slider" min="0.5" max="2" step="0.1" value="1">
+                    </div>
+
+                    <div class="audio-control">
+                        <label for="pitchSlider">Pitch: <span id="pitchValue">1.0</span></label>
+                        <input type="range" id="pitchSlider" class="audio-slider" min="0.5" max="2" step="0.1" value="1">
+                    </div>
+                </div>
+
+                <div class="tts-playback">
+                    <button class="tts-btn" id="playNarrationBtn">
+                        <span>🎵</span> Play Narration
+                    </button>
+                    <button class="tts-btn stop" id="stopNarrationBtn" style="display: none;">
+                        <span>⏹️</span> Stop
+                    </button>
+                    <div class="tts-status" id="ttsStatus">
+                        <div class="status-indicator" id="statusIndicator"></div>
+                        <span id="statusText">Ready to speak</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chunk-selector" id="chunkSelector">
+                <!-- Chunk buttons will be generated here -->
+            </div>
+
+            <div class="classroom">
+                <div class="content-board">
+                    <div class="content-board-inner" id="contentBoardInner">
+                        <div class="content-title" id="contentTitle">Welcome to TRUNG Study Platform</div>
+                        <div class="content-text" id="contentText">
+                            <p>Select a course from the sidebar to begin your learning journey. Track your progress and resume from where you left off.</p>
+                        </div>
+                        <div class="interactive-content" id="interactiveContent">
+                            <!-- Interactive buttons will be generated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="teacher-area">
+                    <div class="teacher-avatar">👨‍🏫</div>
+                    <div class="controls">
+                        <button class="btn" id="prevBtn" disabled>◀ Previous</button>
+                        <button class="btn" id="nextBtn" disabled>Next ▶</button>
+                        <button class="btn" id="startBtn" style="background: linear-gradient(45deg, #10b981, #34d399); display: none;">🚀 Start Learning</button>
+                        <button class="btn" id="resumeBtn" style="background: linear-gradient(45deg, #3b82f6, #1d4ed8); display: none;">▶️ Resume</button>
+                    </div>
+                </div>
+
+                <div class="exercise-panel" id="exercisePanel" style="display: none;">
+                    <div class="exercise-title" id="exerciseTitle">Interactive Exercise</div>
+                    <div id="exerciseContent"></div>
+                    <textarea class="exercise-input" id="exerciseInput" placeholder="Type your response here..."></textarea>
+                    <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                        <button class="btn" id="submitExercise">Submit Response</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class StudyGameController {
+            constructor() {
+                this.currentChunk = 0;
+                this.currentSubChunk = 0;
+                this.totalSubChunks = 0;
+                this.courseData = null;
+                this.currentCourseId = null;
+                this.allCourses = new Map();
+                this.currentLanguage = 'en-US';
+                this.voices = [];
+                this.selectedVoice = null;
+                this.speechSynthesis = window.speechSynthesis;
+                this.currentUtterance = null;
+                this.isAutoPlayEnabled = true;
+                this.sidebarCollapsed = false;
+                this.isPresentationNarrativePlaying = false;
+                this.courseCompleted = false;
+
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.loadCourseLibrary();
+                    this.setupEventListeners();
+                    this.initializeTTS();
+                    this.loadUserProgress();
+                    this.updateDashboard();
+                    this.renderCourseList();
+                    this.hideLoading();
+                    this.displayWelcome();
+                } catch (error) {
+                    this.handleLoadError(error);
+                }
+            }
+
+            // For loadCourseLibrary method:
+            async loadCourseLibrary() {
+                try {
+                    document.getElementById('loadingText').textContent = 'Scanning for course folders...';
+
+                    // Handle GitHub Pages URL structure properly
+                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    const baseUrl = isLocal ? './' : `${window.location.pathname.replace('/index.html', '').replace(/\/$/, '')}/`;
+
+                    // Try to load a folder structure manifest
+                    let foldersResponse;
+                    try {
+                        const foldersUrl = `${baseUrl}folders.json`;
+                        console.log('Loading folders manifest:', foldersUrl);
+                        foldersResponse = await fetch(foldersUrl);
+                    } catch (e) {
+                        console.log('folders.json not found, trying fallback');
+                        await this.loadSingleFolderStructure();
+                        return;
+                    }
+
+                    if (!foldersResponse.ok) {
+                        console.log('folders.json not accessible, status:', foldersResponse.status);
+                        await this.loadSingleFolderStructure();
+                        return;
+                    }
+
+                    const foldersData = await foldersResponse.json();
+                    console.log('Loaded folders data:', foldersData);
+
+                    if (!foldersData.folders || !Array.isArray(foldersData.folders)) {
+                        throw new Error('Invalid folders.json structure: missing folders array');
+                    }
+
+                    // Load each subfolder
+                    for (const folderInfo of foldersData.folders) {
+                        await this.loadFolderCourses(folderInfo);
+                    }
+
+                    if (this.allCourses.size === 0) {
+                        throw new Error('No valid course files could be loaded from any folder');
+                    }
+
+                    console.log(`Loaded ${this.allCourses.size} courses from ${foldersData.folders.length} folders`);
+
+                } catch (error) {
+                    console.error('Failed to load course library:', error);
+                    throw error;
+                }
+            }
+
+            // For loadFolderCourses method:
+            async loadFolderCourses(folderInfo) {
+                try {
+                    document.getElementById('loadingText').textContent = `Loading ${folderInfo.name}...`;
+
+                    // Handle GitHub Pages URL structure properly
+                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    const baseUrl = isLocal ? './' : `${window.location.pathname.replace('/index.html', '').replace(/\/$/, '')}/`;
+
+                    // Load the courses.json file from the subfolder
+                    const manifestUrl = `${baseUrl}${folderInfo.path}/courses.json`;
+                    console.log('Attempting to load manifest:', manifestUrl);
+
+                    const manifestResponse = await fetch(manifestUrl);
+
+                    if (!manifestResponse.ok) {
+                        console.warn(`No courses.json found in folder: ${folderInfo.path} (${manifestResponse.status})`);
+                        return;
+                    }
+
+                    const manifest = await manifestResponse.json();
+
+                    if (!manifest.courses || !Array.isArray(manifest.courses)) {
+                        console.warn(`Invalid courses.json in folder: ${folderInfo.path}`);
+                        return;
+                    }
+
+                    // Load each course file from the subfolder
+                    for (const courseInfo of manifest.courses) {
+                        try {
+                            const coursePath = `${baseUrl}${folderInfo.path}/${courseInfo.filename}`;
+                            console.log('Loading course:', coursePath);
+                            const response = await fetch(coursePath);
+
+                            if (response.ok) {
+                                const courseData = await response.json();
+                                const courseId = `${folderInfo.id}_${courseInfo.id}`;
+
+                                this.allCourses.set(courseId, {
+                                    id: courseId,
+                                    title: courseInfo.title,
+                                    filename: courseInfo.filename,
+                                    folder: folderInfo.id,
+                                    folderName: folderInfo.name,
+                                    data: courseData
+                                });
+                            } else {
+                                console.warn(`Failed to load course: ${coursePath} (${response.status})`);
+                            }
+                        } catch (error) {
+                            console.warn(`Error loading course ${courseInfo.filename} from ${folderInfo.path}:`, error);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`Error loading folder ${folderInfo.path}:`, error);
+                }
+            }
+
+            // For loadSingleFolderStructure method:
+            async loadSingleFolderStructure() {
+                try {
+                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    const baseUrl = isLocal ? './' : `${window.location.pathname.replace('/index.html', '').replace(/\/$/, '')}/`;
+
+                    const manifestUrl = `${baseUrl}courses.json`;
+                    console.log('Loading single folder manifest:', manifestUrl);
+
+                    const manifestResponse = await fetch(manifestUrl);
+                    if (manifestResponse.ok) {
+                        const manifest = await manifestResponse.json();
+                        for (const courseInfo of manifest.courses) {
+                            try {
+                                const courseUrl = `${baseUrl}${courseInfo.filename}`;
+                                const response = await fetch(courseUrl);
+                                if (response.ok) {
+                                    const courseData = await response.json();
+                                    this.allCourses.set(courseInfo.id, {
+                                        id: courseInfo.id,
+                                        title: courseInfo.title,
+                                        filename: courseInfo.filename,
+                                        folder: 'root',
+                                        data: courseData
+                                    });
+                                }
+                            } catch (error) {
+                                console.warn(`Error loading course ${courseInfo.filename}:`, error);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('No courses.json found, trying legacy structure');
+                    try {
+                        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                        const baseUrl = isLocal ? './' : `${window.location.pathname.replace('/index.html', '').replace(/\/$/, '')}/`;
+
+                        const testDataUrl = `${baseUrl}testdata.json`;
+                        const testDataResponse = await fetch(testDataUrl);
+                        if (testDataResponse.ok) {
+                            const testData = await testDataResponse.json();
+                            this.allCourses.set('testdata', {
+                                id: 'testdata',
+                                title: testData.course_title || 'Test Course',
+                                filename: 'testdata.json',
+                                folder: 'root',
+                                data: testData
+                            });
+                        }
+                    } catch (e) {
+                        throw new Error('No course files found');
+                    }
+                }
+            }
+
+            setupEventListeners() {
+                // Sidebar toggle
+                document.getElementById('sidebarToggle').addEventListener('click', () => this.toggleSidebar());
+
+                // Course navigation
+                document.getElementById('startBtn').addEventListener('click', () => this.startLearning());
+                document.getElementById('resumeBtn').addEventListener('click', () => this.resumeLearning());
+                document.getElementById('nextBtn').addEventListener('click', () => this.nextSubChunk());
+                document.getElementById('prevBtn').addEventListener('click', () => this.prevSubChunk());
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    // Only trigger if not typing in an input field
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                        if (e.key === 'ArrowRight') {
+                            e.preventDefault();
+                            const nextBtn = document.getElementById('nextBtn');
+                            if (!nextBtn.disabled && nextBtn.style.display !== 'none') {
+                                this.nextSubChunk();
+                            }
+                        } else if (e.key === 'ArrowLeft') {
+                            e.preventDefault();
+                            const prevBtn = document.getElementById('prevBtn');
+                            if (!prevBtn.disabled) {
+                                this.prevSubChunk();
+                            }
+                        }
+                    }
+                });
+
+                // TTS controls
+                document.getElementById('playNarrationBtn').addEventListener('click', () => this.playCurrentNarration());
+                document.getElementById('stopNarrationBtn').addEventListener('click', () => this.stopSpeech());
+                document.getElementById('submitExercise').addEventListener('click', () => this.submitExercise());
+
+                // Language selector
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.selectLanguage(e.target.dataset.lang));
+                });
+
+                // Voice selector
+                document.getElementById('voiceSelect').addEventListener('change', (e) => {
+                    this.selectVoice(e.target.value);
+                });
+
+                // Rate and pitch controls
+                document.getElementById('rateSlider').addEventListener('input', (e) => {
+                    document.getElementById('rateValue').textContent = e.target.value + 'x';
+                });
+
+                document.getElementById('pitchSlider').addEventListener('input', (e) => {
+                    document.getElementById('pitchValue').textContent = e.target.value;
+                });
+            }
+
+            toggleSidebar() {
+                this.sidebarCollapsed = !this.sidebarCollapsed;
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('mainContent');
+                const toggle = document.getElementById('sidebarToggle');
+
+                if (this.sidebarCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    mainContent.classList.add('sidebar-collapsed');
+                    toggle.classList.add('collapsed');
+                    toggle.textContent = '›';
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    mainContent.classList.remove('sidebar-collapsed');
+                    toggle.classList.remove('collapsed');
+                    toggle.textContent = '‹';
+                }
+            }
+
+            renderCourseList() {
+                const courseList = document.getElementById('courseList');
+                courseList.innerHTML = '';
+
+                // Group courses by folder
+                const coursesByFolder = new Map();
+                
+                this.allCourses.forEach((course, courseId) => {
+                    const folderKey = course.folder || 'root';
+                    if (!coursesByFolder.has(folderKey)) {
+                        coursesByFolder.set(folderKey, []);
+                    }
+                    coursesByFolder.get(folderKey).push({...course, courseId});
+                });
+
+                // Render each folder section
+                coursesByFolder.forEach((courses, folderId) => {
+                    const folderId_clean = folderId.replace(/[^a-zA-Z0-9]/g, '_');
+                    const isCollapsed = this.getFolderCollapseState(folderId_clean);
+                    
+                    // Create folder header with collapse functionality
+                    const folderHeader = document.createElement('div');
+                    folderHeader.className = 'folder-header';
+                    folderHeader.style.cursor = 'pointer';
+                    folderHeader.innerHTML = `
+                        <div class="folder-title" style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="folder-icon" style="transition: transform 0.3s ease;">${isCollapsed ? '📁' : '📂'}</span>
+                                <span class="folder-chevron" style="transition: transform 0.3s ease; transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'};">▼</span>
+                                ${courses[0].folderName || 'Main Courses'}
+                            </span>
+                            <span class="course-count" style="font-size: 0.8em; opacity: 0.7;">(${courses.length})</span>
+                        </div>
+                        <div class="folder-progress">
+                            <div class="progress-bar-mini">
+                                <div class="progress-fill-mini" style="width: ${this.calculateFolderProgressForCourses(courses)}%"></div>
+                            </div>
+                            <div class="progress-text-mini">${this.calculateFolderProgressForCourses(courses)}%</div>
+                        </div>
+                    `;
+
+                    // Create courses container
+                    const coursesContainer = document.createElement('div');
+                    coursesContainer.className = 'folder-courses';
+                    coursesContainer.id = `folder_${folderId_clean}`;
+                    coursesContainer.style.display = isCollapsed ? 'none' : 'block';
+                    coursesContainer.style.transition = 'all 0.3s ease';
+
+                    // Add click handler for folder toggle
+                    folderHeader.addEventListener('click', () => {
+                        const isCurrentlyCollapsed = coursesContainer.style.display === 'none';
+                        const chevron = folderHeader.querySelector('.folder-chevron');
+                        const icon = folderHeader.querySelector('.folder-icon');
+                        
+                        if (isCurrentlyCollapsed) {
+                            coursesContainer.style.display = 'block';
+                            chevron.style.transform = 'rotate(0deg)';
+                            icon.textContent = '📂';
+                            this.setFolderCollapseState(folderId_clean, false);
+                        } else {
+                            coursesContainer.style.display = 'none';
+                            chevron.style.transform = 'rotate(-90deg)';
+                            icon.textContent = '📁';
+                            this.setFolderCollapseState(folderId_clean, true);
+                        }
+                    });
+
+                    // Render courses in this folder
+                    courses.forEach(course => {
+                        const progress = this.getUserProgress(course.courseId);
+                        const courseItem = document.createElement('div');
+                        courseItem.className = 'course-item';
+                        courseItem.dataset.courseId = course.courseId;
+
+                        const status = this.getCourseStatus(course, progress); // Fixed: pass course data
+                        const progressPercentage = this.calculateProgressPercentage(course.data, progress);
+
+                        courseItem.innerHTML = `
+                            <div class="course-title">${course.title}</div>
+                            <div class="course-progress">
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill-mini" style="width: ${progressPercentage}%"></div>
+                                </div>
+                                <div class="progress-text-mini">${progressPercentage}%</div>
+                            </div>
+                            <div class="course-status">
+                                <span class="status-badge status-${status.class}">${status.text}</span>
+                                ${progress.lastStudied ? `<span class="last-studied">Last: ${new Date(progress.lastStudied).toLocaleDateString()}</span>` : ''}
+                            </div>
+                        `;
+
+                        courseItem.addEventListener('click', () => this.selectCourse(course.courseId));
+                        coursesContainer.appendChild(courseItem);
+                    });
+
+                    courseList.appendChild(folderHeader);
+                    courseList.appendChild(coursesContainer);
+                });
+            }
+
+            // Add these methods to your StudyGameController class
+            getFolderCollapseState(folderId) {
+                try {
+                    const stored = localStorage.getItem(`folder_collapsed_${folderId}`);
+                    return stored === 'true';
+                } catch (error) {
+                    console.warn('Could not load folder state from localStorage:', error);
+                    return false; // Default to expanded
+                }
+            }
+
+            setFolderCollapseState(folderId, isCollapsed) {
+                try {
+                    localStorage.setItem(`folder_collapsed_${folderId}`, isCollapsed.toString());
+                } catch (error) {
+                    console.warn('Could not save folder state to localStorage:', error);
+                }
+            }
+
+            calculateFolderProgress(courses) {
+                let totalProgress = 0;
+                courses.forEach(course => {
+                    const progress = this.getUserProgress(course.courseId);
+                    totalProgress += this.calculateProgressPercentage(course.data, progress);
+                });
+                return Math.round(totalProgress / courses.length);
+            }
+
+            // Add this method after calculateFolderProgress method
+            calculateFolderProgressForCourses(courses) {
+                if (!courses || courses.length === 0) return 0;
+                
+                let totalProgress = 0;
+                courses.forEach(course => {
+                    const progress = this.getUserProgress(course.courseId);
+                    totalProgress += this.calculateProgressPercentage(course.data, progress);
+                });
+                return Math.round(totalProgress / courses.length);
+            }
+
+            selectCourse(courseId) {
+                // Update active course in sidebar
+                document.querySelectorAll('.course-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelector(`[data-course-id="${courseId}"]`).classList.add('active');
+
+                // Load course
+                const course = this.allCourses.get(courseId);
+                this.currentCourseId = courseId;
+                this.courseData = course.data;
+                this.calculateTotalSubChunks();
+
+                // Load progress and set position
+                const progress = this.getUserProgress(courseId);
+                this.currentChunk = progress.currentChunk || 0;
+                this.currentSubChunk = progress.currentSubChunk || 0;
+                this.courseCompleted = progress.courseCompleted || false;
+
+                this.generateChunkSelector();
+                
+                // Show appropriate buttons
+                const hasProgress = progress.currentChunk > 0 || progress.currentSubChunk > 0 || progress.courseCompleted;
+                document.getElementById('startBtn').style.display = hasProgress ? 'none' : 'inline-flex';
+                document.getElementById('resumeBtn').style.display = hasProgress ? 'inline-flex' : 'none';
+
+                this.displayWelcomeForCourse();
+                this.addResetProgressButton(); // Add reset button
+            }
+
+            addResetProgressButton() {
+                // Remove existing reset button if it exists
+                const existingResetBtn = document.getElementById('resetProgressBtn');
+                if (existingResetBtn) {
+                    existingResetBtn.remove();
+                }
+                
+                // Create reset progress button
+                const resetBtn = document.createElement('button');
+                resetBtn.id = 'resetProgressBtn';
+                resetBtn.className = 'btn';
+                resetBtn.style.cssText = `
+                    background: linear-gradient(45deg, #dc3545, #c82333);
+                    margin-left: 1rem;
+                    font-size: 0.9rem;
+                    padding: 0.75rem 1.5rem;
+                `;
+                resetBtn.innerHTML = '🔄 Reset Progress';
+                
+                resetBtn.addEventListener('click', () => this.resetCourseProgress());
+                
+                // Add to controls
+                const controls = document.querySelector('.controls');
+                controls.appendChild(resetBtn);
+            }
+
+            resetCourseProgress() {
+                if (!this.currentCourseId) return;
+                
+                const confirmReset = confirm(`Are you sure you want to reset all progress for this course?\n\nThis action cannot be undone.`);
+                
+                if (confirmReset) {
+                    // Clear progress from localStorage
+                    try {
+                        localStorage.removeItem(`course_progress_${this.currentCourseId}`);
+                    } catch (error) {
+                        console.warn('Could not clear progress from localStorage:', error);
+                    }
+                    
+                    // Reset local state
+                    this.currentChunk = 0;
+                    this.currentSubChunk = 0;
+                    this.courseCompleted = false;
+                    
+                    // Update UI
+                    this.updateDashboard();
+                    this.renderCourseList();
+                    this.displayWelcomeForCourse();
+                    
+                    // Show start button, hide resume button
+                    document.getElementById('startBtn').style.display = 'inline-flex';
+                    document.getElementById('resumeBtn').style.display = 'none';
+                    document.getElementById('nextBtn').style.display = 'inline-flex';
+                    document.getElementById('nextBtn').textContent = 'Next ▶';
+                    document.getElementById('prevBtn').textContent = '◀ Previous';
+                    
+                    // Reset progress display
+                    document.getElementById('progressFill').style.width = '0%';
+                    document.getElementById('progressText').textContent = 'Progress reset - ready to start';
+                    
+                    alert('Course progress has been reset successfully!');
+                }
+            }
+
+            startLearning() {
+                this.currentChunk = 0;
+                this.currentSubChunk = 0;
+                this.displayCurrentSubChunk();
+                this.saveProgress();
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('resumeBtn').style.display = 'none';
+                this.updateButtons();
+            }
+
+            resumeLearning() {
+                this.displayCurrentSubChunk();
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('resumeBtn').style.display = 'none';
+                this.updateButtons();
+            }
+
+            saveProgress() {
+                if (!this.currentCourseId) return;
+
+                const progress = {
+                    currentChunk: this.currentChunk,
+                    currentSubChunk: this.currentSubChunk,
+                    lastStudied: new Date().toISOString(),
+                    totalSubChunks: this.totalSubChunks,
+                    studyTime: (this.getUserProgress(this.currentCourseId).studyTime || 0) + 1,
+                    courseCompleted: this.courseCompleted || false  // Add this line
+                };
+
+                try {
+                    localStorage.setItem(`course_progress_${this.currentCourseId}`, JSON.stringify(progress));
+                    this.updateDashboard();
+                    this.renderCourseList();
+                } catch (error) {
+                    console.warn('Could not save progress to localStorage:', error);
+                }
+            }
+
+            getUserProgress(courseId) {
+                try {
+                    const stored = localStorage.getItem(`course_progress_${courseId}`);
+                    return stored ? JSON.parse(stored) : {};
+                } catch (error) {
+                    console.warn('Could not load progress from localStorage:', error);
+                    return {};
+                }
+            }
+
+            loadUserProgress() {
+                // This method ensures localStorage compatibility
+                try {
+                    localStorage.setItem('test', 'test');
+                    localStorage.removeItem('test');
+                } catch (error) {
+                    console.warn('localStorage not available, progress will not be saved');
+                }
+            }
+
+            getCourseStatus(course, progress) {
+                if (progress.courseCompleted) {
+                    return { text: 'Completed', class: 'completed' };
+                }
+                
+                if (!progress.currentChunk && !progress.currentSubChunk) {
+                    return { text: 'Not Started', class: 'not-started' };
+                }
+                
+                // Use the passed course parameter instead of this.currentCourseId
+                if (!course || !course.data) return { text: 'Unknown', class: 'not-started' };
+
+                const totalSubChunks = course.data.chunks.reduce((total, chunk) => total + chunk.sub_chunks.length, 0);
+                let completedSubChunks = 0;
+                for (let i = 0; i < (progress.currentChunk || 0); i++) {
+                    completedSubChunks += course.data.chunks[i].sub_chunks.length;
+                }
+                completedSubChunks += (progress.currentSubChunk || 0);
+
+                if (completedSubChunks >= totalSubChunks) {
+                    return { text: 'Completed', class: 'completed' };
+                }
+                return { text: 'In Progress', class: 'in-progress' };
+            }
+
+            calculateProgressPercentage(courseData, progress) {
+                // Check if course is marked as completed
+                if (progress.courseCompleted) {
+                    return 100;
+                }
+                
+                if (!progress.currentChunk && !progress.currentSubChunk) return 0;
+                
+                const totalSubChunks = courseData.chunks.reduce((total, chunk) => total + chunk.sub_chunks.length, 0);
+                let completedSubChunks = 0;
+                
+                for (let i = 0; i < (progress.currentChunk || 0); i++) {
+                    completedSubChunks += courseData.chunks[i].sub_chunks.length;
+                }
+                completedSubChunks += (progress.currentSubChunk || 0);
+                
+                return Math.round((completedSubChunks / totalSubChunks) * 100);
+            }
+
+            updateDashboard() {
+                const totalCourses = this.allCourses.size;
+                let completedCourses = 0;
+                let inProgressCourses = 0;
+                let totalStudyTime = 0;
+                let totalProgress = 0;
+
+                this.allCourses.forEach((course, courseId) => {
+                    const progress = this.getUserProgress(courseId);
+                    const status = this.getCourseStatus(course, progress); // Pass course data
+                    
+                    if (status.class === 'completed') completedCourses++;
+                    if (status.class === 'in-progress') inProgressCourses++;
+                    
+                    totalStudyTime += progress.studyTime || 0;
+                    totalProgress += this.calculateProgressPercentage(course.data, progress);
+                });
+
+                const overallPercentage = totalCourses > 0 ? Math.round(totalProgress / totalCourses) : 0;
+
+                document.getElementById('totalCourses').textContent = totalCourses;
+                document.getElementById('completedCourses').textContent = completedCourses;
+                document.getElementById('inProgressCourses').textContent = inProgressCourses;
+                document.getElementById('totalStudyTime').textContent = Math.round(totalStudyTime / 60) + 'h';
+                document.getElementById('overallPercentage').textContent = overallPercentage + '%';
+                document.getElementById('overallProgressFill').style.width = overallPercentage + '%';
+            }
+
+            // Enhanced Voice filtering for Natural voices only
+            initializeTTS() {
+                if ('speechSynthesis' in window) {
+                    this.loadVoices();
+                    if (speechSynthesis.onvoiceschanged !== undefined) {
+                        speechSynthesis.onvoiceschanged = () => this.loadVoices();
+                    }
+                } else {
+                    console.warn('Speech synthesis not supported');
+                    document.getElementById('ttsPanel').style.display = 'none';
+                }
+            }
+
+            loadVoices() {
+                this.voices = speechSynthesis.getVoices();
+                
+                if (this.voices.length > 0) {
+                    console.log('All available voices:', this.voices.map(v => `${v.name} (${v.lang})`));
+                }
+                
+                this.populateVoiceSelector();
+                this.selectDefaultVoice();
+            }
+
+            populateVoiceSelector() {
+                const select = document.getElementById('voiceSelect');
+                
+                // Enhanced filtering for Natural voices only
+                let filteredVoices = this.voices.filter(voice => {
+                    const name = voice.name.toLowerCase();
+                    const lang = voice.lang.toLowerCase();
+                    
+                    // Must contain "Natural" in the name
+                    if (!name.includes('natural')) {
+                        return false;
+                    }
+                    
+                    // Filter by language
+                    if (this.currentLanguage === 'en-US') {
+                        return lang.includes('en-us') || lang.includes('en_us') || (lang.startsWith('en') && name.includes('en-us'));
+                    } else if (this.currentLanguage === 'ja-JP') {
+                        return lang.includes('ja-jp') || lang.includes('ja_jp') || (lang.startsWith('ja') && name.includes('ja-jp'));
+                    } else if (this.currentLanguage === 'vi-VN') {
+                        return lang.includes('vi-vn') || lang.includes('vi_vn') || (lang.startsWith('vi') && name.includes('vi-vn'));
+                    }
+                    
+                    return false;
+                });
+
+                console.log(`Natural ${this.currentLanguage} voices found:`, filteredVoices.map(v => v.name));
+
+                select.innerHTML = '';
+
+                if (filteredVoices.length === 0) {
+                    select.innerHTML = '<option>No Natural voices available for this language</option>';
+                    return;
+                }
+
+                // Sort voices alphabetically
+                filteredVoices.sort((a, b) => a.name.localeCompare(b.name));
+
+                filteredVoices.forEach((voice, index) => {
+                    const option = document.createElement('option');
+                    option.value = voice.name;
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    if (voice.default) option.selected = true;
+                    select.appendChild(option);
+                });
+
+                this.updateVoiceInfo(filteredVoices[0]);
+            }
+
+            selectLanguage(langCode) {
+                this.currentLanguage = langCode;
+
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.lang === langCode);
+                });
+
+                this.populateVoiceSelector();
+                this.stopSpeech();
+            }
+
+            selectVoice(voiceName) {
+                this.selectedVoice = this.voices.find(voice => voice.name === voiceName);
+                this.updateVoiceInfo(this.selectedVoice);
+            }
+
+            selectDefaultVoice() {
+                const langCode = this.currentLanguage;
+                let filteredVoices = this.voices.filter(voice => {
+                    const name = voice.name.toLowerCase();
+                    const lang = voice.lang.toLowerCase();
+                    
+                    if (!name.includes('natural')) return false;
+                    
+                    if (langCode === 'en-US') {
+                        return lang.includes('en-us') || lang.includes('en_us') || (lang.startsWith('en') && name.includes('en-us'));
+                    } else if (langCode === 'ja-JP') {
+                        return lang.includes('ja-jp') || lang.includes('ja_jp') || (lang.startsWith('ja') && name.includes('ja-jp'));
+                    } else if (langCode === 'vi-VN') {
+                        return lang.includes('vi-vn') || lang.includes('vi_vn') || (lang.startsWith('vi') && name.includes('vi-vn'));
+                    }
+                    
+                    return false;
+                });
+
+                if (filteredVoices.length > 0) {
+                    const defaultVoice = filteredVoices.find(voice => voice.default) || filteredVoices[0];
+                    this.selectedVoice = defaultVoice;
+                    document.getElementById('voiceSelect').value = defaultVoice.name;
+                    this.updateVoiceInfo(defaultVoice);
+                }
+            }
+
+            updateVoiceInfo(voice) {
+                const info = document.getElementById('voiceInfo');
+                if (voice) {
+                    info.innerHTML = `
+                        <strong>${voice.name}</strong><br>
+                        Language: ${voice.lang}<br>
+                        ${voice.localService ? 'Local' : 'Network'} • ${voice.default ? 'Default' : 'Alternative'}
+                    `;
+                } else {
+                    info.textContent = 'No voice selected';
+                }
+            }
+
+            calculateTotalSubChunks() {
+                if (!this.courseData) return;
+                this.totalSubChunks = this.courseData.chunks.reduce((total, chunk) =>
+                    total + chunk.sub_chunks.length, 0);
+            }
+
+            getCurrentSubChunk() {
+                return this.courseData?.chunks[this.currentChunk]?.sub_chunks[this.currentSubChunk];
+            }
+
+            generateChunkSelector() {
+                if (!this.courseData) return;
+                
+                const selector = document.getElementById('chunkSelector');
+                selector.innerHTML = '';
+
+                this.courseData.chunks.forEach((chunk, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'chunk-btn';
+                    btn.textContent = `Chunk ${chunk.chunk_id}: ${chunk.chunk_title}`;
+                    btn.addEventListener('click', () => this.jumpToChunk(index));
+                    selector.appendChild(btn);
+                });
+            }
+
+            hideLoading() {
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                }, 1000);
+            }
+
+            handleLoadError(error) {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                document.getElementById('errorPanel').style.display = 'block';
+                console.error('Course loading failed:', error);
+            }
+
+            displayWelcome() {
+                document.getElementById('contentTitle').textContent = 'Welcome to Trung Study Platform';
+                document.getElementById('contentText').innerHTML = '<p>Select a course from the sidebar to begin your learning journey. Track your progress and resume from where you left off.</p>';
+                document.getElementById('progressText').textContent = 'Select a course to begin';
+                document.getElementById('interactiveContent').innerHTML = '';
+            }
+
+            displayWelcomeForCourse() {
+                if (!this.courseData) return;
+                
+                document.getElementById('contentTitle').textContent = this.courseData.course_title;
+                document.getElementById('contentText').innerHTML = '<p>Ready to continue your learning journey. Use the Start or Resume button to begin.</p>';
+                document.getElementById('progressText').textContent = 'Course selected - ready to begin';
+                document.getElementById('interactiveContent').innerHTML = '';
+            }
+
+            displayCurrentSubChunk() {
+                const subChunk = this.getCurrentSubChunk();
+                if (!subChunk) return;
+
+                this.updateChunkSelector();
+                this.displayContentBoard(subChunk);
+                this.updateProgress();
+                this.updateButtons();
+                this.saveProgress();
+                this.createInteractiveContent(subChunk);
+
+                if (this.isAutoPlayEnabled && subChunk.presentation_narrative) {
+                    setTimeout(() => this.playCurrentNarration(), 1000);
+                }
+
+                if (subChunk.small_quiz) {
+                    this.showExercise(subChunk);
+                } else {
+                    this.hideExercise();
+                }
+            }
+
+            displayContentBoard(subChunk) {
+                const title = document.getElementById('contentTitle');
+                const content = document.getElementById('contentText');
+
+                title.style.opacity = '0';
+                content.style.opacity = '0';
+
+                setTimeout(() => {
+                    title.textContent = subChunk.header;
+                    content.innerHTML = this.generateContentHTML(subChunk);
+
+                    title.style.opacity = '1';
+                    content.style.opacity = '1';
+                }, 300);
+            }
+
+            generateContentHTML(subChunk) {
+                let html = `<p>${subChunk.contents}</p>`;
+
+                if (subChunk.key_takeaways && subChunk.key_takeaways.length > 0) {
+                    html += '<div class="highlight-box"><h3>Key Takeaways:</h3><ul class="content-list">';
+                    subChunk.key_takeaways.forEach(takeaway => {
+                        html += `<li>${takeaway}</li>`;
+                    });
+                    html += '</ul></div>';
+                }
+
+                if (subChunk.analogies && subChunk.analogies.length > 0) {
+                    html += '<div class="highlight-box"><h3>Analogy:</h3>';
+                    subChunk.analogies.forEach(analogy => {
+                        html += `<h4>${analogy.title}</h4><p>${analogy.description}</p>`;
+                    });
+                    html += '</div>';
+                }
+
+                return html;
+            }
+
+            createInteractiveContent(subChunk) {
+                const container = document.getElementById('interactiveContent');
+                container.innerHTML = '';
+
+                // Create interactive buttons for hoverable content
+                const buttonConfigs = [
+                    {
+                        key: 'contents',
+                        label: '📝 Main Content',
+                        icon: '📝',
+                        className: 'contents'
+                    },
+                    {
+                        key: 'key_takeaways',
+                        label: '🎯 Key Takeaways',
+                        icon: '🎯',
+                        className: 'key-takeaways'
+                    },
+                    {
+                        key: 'analogies',  // Added this
+                        label: '🔗 Analogies',
+                        icon: '🔗',
+                        className: 'analogies'
+                    },
+                    {
+                        key: 'common_misunderstandings',
+                        label: '⚠️ Common Misunderstandings',
+                        icon: '⚠️',
+                        className: 'common-misunderstandings'
+                    },
+                    {
+                        key: 'real_life_examples',
+                        label: '🌟 Real Life Examples',
+                        icon: '🌟',
+                        className: 'real-life-examples'
+                    }
+                ];
+
+                buttonConfigs.forEach(config => {
+                    if (subChunk[config.key]) {
+                        const button = this.createInfoButton(config, subChunk[config.key]);
+                        container.appendChild(button);
+                    }
+                });
+            }
+
+            // Option 1: Center tooltip in viewport with overlay
+            createInfoButton(config, data) {
+                const button = document.createElement('button');
+                button.className = `info-button ${config.className}`;
+                button.innerHTML = `<span>${config.icon}</span> ${config.label}`;
+
+                // Create tooltip content
+                let tooltipContent = '';
+                if (Array.isArray(data)) {
+                    if (config.key === 'real_life_examples') {
+                        data.forEach(example => {
+                            tooltipContent += `${example.scenario}:\n${example.description}\n\nLesson: ${example.lesson}\n\n`;
+                        });
+                    } else if (config.key === 'analogies') {
+                        data.forEach(analogy => {
+                            tooltipContent += `${analogy.title}:\n${analogy.description}\n\n`;
+                        });
+                    } else {
+                        tooltipContent = data.join('\n\n');
+                    }
+                } else {
+                    tooltipContent = data;
+                }
+
+                // Create centered tooltip overlay
+                const tooltipOverlay = document.createElement('div');
+                tooltipOverlay.className = 'tooltip-overlay';
+                tooltipOverlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: none;
+                    z-index: 1000;
+                    justify-content: center;
+                    align-items: center;
+                `;
+
+                const tooltip = document.createElement('div');
+                tooltip.className = 'centered-tooltip';
+                tooltip.style.cssText = `
+                    background: #333;
+                    color: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 600px;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                    white-space: pre-wrap;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    position: relative;
+                `;
+                tooltip.textContent = tooltipContent.trim();
+
+                // Add close button
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '×';
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    right: 15px;
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                `;
+                
+                tooltip.appendChild(closeBtn);
+                tooltipOverlay.appendChild(tooltip);
+
+                // Function to show tooltip
+                const showTooltip = () => {
+                    document.body.appendChild(tooltipOverlay);
+                    tooltipOverlay.style.display = 'flex';
+                    
+                    // Only play if presentation narrative is not currently playing
+                    if (!this.isPresentationNarrativePlaying) {
+                        this.speakText(tooltipContent, false);
+                    }
+                };
+
+                // Function to hide tooltip
+                const hideTooltip = () => {
+                    tooltipOverlay.style.display = 'none';
+                    if (tooltipOverlay.parentNode) {
+                        document.body.removeChild(tooltipOverlay);
+                    }
+                    
+                    // Stop speaking if it's not the main presentation narrative
+                    if (!this.isPresentationNarrativePlaying && this.currentUtterance) {
+                        this.stopSpeech();
+                    }
+                };
+
+                // Add hover events with proper state management
+                let hoverTimeout;
+                let hideTimeout;
+                let isTooltipVisible = false;
+
+                button.addEventListener('mouseenter', () => {
+                    clearTimeout(hoverTimeout);
+                    clearTimeout(hideTimeout);
+                    
+                    if (!isTooltipVisible) {
+                        hoverTimeout = setTimeout(() => {
+                            showTooltip();
+                            isTooltipVisible = true;
+                        }, 500); // Delay to avoid accidental triggers
+                    }
+                });
+
+                button.addEventListener('mouseleave', (e) => {
+                    clearTimeout(hoverTimeout);
+                    
+                    // Only hide if we're not moving to the tooltip
+                    if (isTooltipVisible && !tooltipOverlay.contains(e.relatedTarget)) {
+                        hideTimeout = setTimeout(() => {
+                            hideTooltip();
+                            isTooltipVisible = false;
+                        }, 200);
+                    }
+                });
+
+                // Keep tooltip open when hovering over it
+                tooltipOverlay.addEventListener('mouseenter', () => {
+                    clearTimeout(hideTimeout);
+                });
+
+                tooltipOverlay.addEventListener('mouseleave', () => {
+                    hideTimeout = setTimeout(() => {
+                        hideTooltip();
+                        isTooltipVisible = false;
+                    }, 100);
+                });
+
+                // Close on click outside or close button
+                closeBtn.addEventListener('click', hideTooltip);
+                tooltipOverlay.addEventListener('click', (e) => {
+                    if (e.target === tooltipOverlay) {
+                        hideTooltip();
+                    }
+                });
+
+                // Close on Escape key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && tooltipOverlay.style.display === 'flex') {
+                        hideTooltip();
+                    }
+                });
+
+                return button;
+            }
+
+            // Option 2: Simpler approach - just center without overlay
+            createInfoButtonSimple(config, data) {
+                const button = document.createElement('button');
+                button.className = `info-button ${config.className}`;
+                button.innerHTML = `<span>${config.icon}</span> ${config.label}`;
+
+                // Create tooltip content (same as before)
+                let tooltipContent = '';
+                if (Array.isArray(data)) {
+                    if (config.key === 'real_life_examples') {
+                        data.forEach(example => {
+                            tooltipContent += `${example.scenario}:\n${example.description}\n\nLesson: ${example.lesson}\n\n`;
+                        });
+                    } else if (config.key === 'analogies') {
+                        data.forEach(analogy => {
+                            tooltipContent += `${analogy.title}:\n${analogy.description}\n\n`;
+                        });
+                    } else {
+                        tooltipContent = data.join('\n\n');
+                    }
+                } else {
+                    tooltipContent = data;
+                }
+
+                // Create centered tooltip
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip-centered';
+                tooltip.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: #333;
+                    color: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 600px;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                    white-space: pre-wrap;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    z-index: 1000;
+                    display: none;
+                `;
+                tooltip.textContent = tooltipContent.trim();
+
+                // Add hover events
+                let hoverTimeout;
+                button.addEventListener('mouseenter', () => {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = setTimeout(() => {
+                        document.body.appendChild(tooltip);
+                        tooltip.style.display = 'block';
+                        
+                        // Only play if presentation narrative is not currently playing
+                        if (!this.isPresentationNarrativePlaying) {
+                            this.speakText(tooltipContent, false);
+                        }
+                    }, 500);
+                });
+
+                button.addEventListener('mouseleave', () => {
+                    clearTimeout(hoverTimeout);
+                    tooltip.style.display = 'none';
+                    if (tooltip.parentNode) {
+                        document.body.removeChild(tooltip);
+                    }
+                    
+                    // Stop speaking if it's not the main presentation narrative
+                    if (!this.isPresentationNarrativePlaying && this.currentUtterance) {
+                        this.stopSpeech();
+                    }
+                });
+
+                return button;
+            }
+
+            playCurrentNarration() {
+                const currentSubChunk = this.getCurrentSubChunk();
+                if (currentSubChunk && currentSubChunk.presentation_narrative) {
+                    this.speakText(currentSubChunk.presentation_narrative, true);
+                }
+            }
+
+            speakText(text, isPresentationNarrative = false) {
+                this.stopSpeech();
+
+                if (!this.selectedVoice) {
+                    this.updateStatus('No voice selected', false);
+                    return;
+                }
+
+                this.isPresentationNarrativePlaying = isPresentationNarrative;
+                this.currentUtterance = new SpeechSynthesisUtterance(text);
+                this.currentUtterance.voice = this.selectedVoice;
+                this.currentUtterance.rate = parseFloat(document.getElementById('rateSlider').value);
+                this.currentUtterance.pitch = parseFloat(document.getElementById('pitchSlider').value);
+
+                this.currentUtterance.onstart = () => {
+                    this.updateStatus('Speaking...', true);
+                    if (isPresentationNarrative) {
+                        document.getElementById('playNarrationBtn').style.display = 'none';
+                        document.getElementById('stopNarrationBtn').style.display = 'inline-flex';
+                    }
+                };
+
+                this.currentUtterance.onend = () => {
+                    this.updateStatus('Finished speaking', false);
+                    this.isPresentationNarrativePlaying = false;
+                    if (isPresentationNarrative) {
+                        document.getElementById('playNarrationBtn').style.display = 'inline-flex';
+                        document.getElementById('stopNarrationBtn').style.display = 'none';
+                    }
+                };
+
+                this.currentUtterance.onerror = (event) => {
+                    this.updateStatus(`Error: ${event.error}`, false);
+                    this.isPresentationNarrativePlaying = false;
+                    if (isPresentationNarrative) {
+                        document.getElementById('playNarrationBtn').style.display = 'inline-flex';
+                        document.getElementById('stopNarrationBtn').style.display = 'none';
+                    }
+                };
+
+                speechSynthesis.speak(this.currentUtterance);
+            }
+
+            stopSpeech() {
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                }
+                this.isPresentationNarrativePlaying = false;
+                this.updateStatus('Stopped', false);
+                document.getElementById('playNarrationBtn').style.display = 'inline-flex';
+                document.getElementById('stopNarrationBtn').style.display = 'none';
+            }
+
+            updateStatus(text, isSpeaking) {
+                document.getElementById('statusText').textContent = text;
+                const indicator = document.getElementById('statusIndicator');
+                indicator.classList.toggle('speaking', isSpeaking);
+            }
+
+            showExercise(subChunk) {
+                const panel = document.getElementById('exercisePanel');
+                const title = document.getElementById('exerciseTitle');
+                const content = document.getElementById('exerciseContent');
+
+                if (subChunk.small_quiz) {
+                    title.textContent = 'Quick Quiz';
+                    content.innerHTML = `
+                        <p><strong>${subChunk.small_quiz.question}</strong></p>
+                        <div style="margin: 1rem 0;">
+                            ${subChunk.small_quiz.options.map((option, index) =>
+                        `<label style="display: block; margin: 0.5rem 0; cursor: pointer; color: white;">
+                                    <input type="radio" name="quiz" value="${index}" style="margin-right: 0.5rem;">
+                                    ${option}
+                                </label>`
+                    ).join('')}
+                        </div>
+                    `;
+
+                    // Add TTS hover functionality for quiz content
+                    let quizHoverTimeout;
+                    const quizContent = `Quiz Question: ${subChunk.small_quiz.question}. Answer options: ${subChunk.small_quiz.options.map((option, index) => `Option ${index + 1}: ${option}`).join('. ')}`;
+                    
+                    panel.addEventListener('mouseenter', () => {
+                        clearTimeout(quizHoverTimeout);
+                        quizHoverTimeout = setTimeout(() => {
+                            if (!this.isPresentationNarrativePlaying) {
+                                this.speakText(quizContent, false);
+                            }
+                        }, 500);
+                    });
+
+                    panel.addEventListener('mouseleave', () => {
+                        clearTimeout(quizHoverTimeout);
+                        if (!this.isPresentationNarrativePlaying && this.currentUtterance) {
+                            this.stopSpeech();
+                        }
+                    });
+                }
+
+                panel.style.display = 'block';
+                panel.style.animation = 'fadeInUp 0.5s ease';
+            }
+
+            hideExercise() {
+                document.getElementById('exercisePanel').style.display = 'none';
+            }
+
+            submitExercise() {
+                const selectedAnswer = document.querySelector('input[name="quiz"]:checked');
+                const currentSubChunk = this.getCurrentSubChunk();
+
+                if (selectedAnswer && currentSubChunk.small_quiz) {
+                    const answerIndex = parseInt(selectedAnswer.value);
+                    const isCorrect = answerIndex === currentSubChunk.small_quiz.correct_answer;
+                    
+                    const feedbackMessage = isCorrect ?
+                        `Correct! ${currentSubChunk.small_quiz.explanation}` :
+                        `Incorrect. ${currentSubChunk.small_quiz.explanation}`;
+
+                    // Show alert
+                    alert(feedbackMessage);
+                    
+                    // Read feedback with TTS
+                    this.speakText(feedbackMessage, false);
+                } else {
+                    const message = 'Please select an answer before continuing.';
+                    alert(message);
+                    this.speakText(message, false);
+                }
+            }
+
+            nextSubChunk() {
+                if (!this.courseData) return;
+                
+                const currentChunkData = this.courseData.chunks[this.currentChunk];
+
+                if (this.currentSubChunk < currentChunkData.sub_chunks.length - 1) {
+                    this.currentSubChunk++;
+                } else if (this.currentChunk < this.courseData.chunks.length - 1) {
+                    this.currentChunk++;
+                    this.currentSubChunk = 0;
+                } else {
+                    this.showCompletion();
+                    return;
+                }
+
+                this.displayCurrentSubChunk();
+            }
+
+            prevSubChunk() {
+                if (this.currentSubChunk > 0) {
+                    this.currentSubChunk--;
+                } else if (this.currentChunk > 0) {
+                    this.currentChunk--;
+                    this.currentSubChunk = this.courseData.chunks[this.currentChunk].sub_chunks.length - 1;
+                } else {
+                    return;
+                }
+
+                this.displayCurrentSubChunk();
+            }
+
+            jumpToChunk(chunkIndex) {
+                this.currentChunk = chunkIndex;
+                this.currentSubChunk = 0;
+                this.displayCurrentSubChunk();
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('resumeBtn').style.display = 'none';
+            }
+
+            updateChunkSelector() {
+                const buttons = document.querySelectorAll('.chunk-btn');
+                buttons.forEach((btn, index) => {
+                    btn.classList.toggle('active', index === this.currentChunk);
+                });
+            }
+
+            updateButtons() {
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+
+                prevBtn.disabled = (this.currentChunk === 0 && this.currentSubChunk === 0);
+                nextBtn.disabled = false;
+
+                const isLastSubChunk = (this.currentChunk === this.courseData.chunks.length - 1) &&
+                    (this.currentSubChunk === this.courseData.chunks[this.currentChunk].sub_chunks.length - 1);
+
+                nextBtn.textContent = isLastSubChunk ? 'Complete Course 🎓' : 'Next ▶';
+            }
+
+            updateProgress() {
+                if (!this.courseData) return;
+                
+                let completedSubChunks = 0;
+
+                if (this.courseCompleted) {
+                    // Course is completed, show 100%
+                    completedSubChunks = this.totalSubChunks;
+                } else {
+                    // Normal progress calculation
+                    for (let i = 0; i < this.currentChunk; i++) {
+                        completedSubChunks += this.courseData.chunks[i].sub_chunks.length;
+                    }
+                    completedSubChunks += this.currentSubChunk + 1;
+                }
+
+                const percentage = (completedSubChunks / this.totalSubChunks) * 100;
+
+                document.getElementById('progressFill').style.width = `${percentage}%`;
+                document.getElementById('progressText').textContent = this.courseCompleted ? 
+                    `Course Complete! ${this.totalSubChunks} of ${this.totalSubChunks} (100%)` :
+                    `Section ${completedSubChunks} of ${this.totalSubChunks} (${Math.round(percentage)}%)`;
+            }
+
+            // Modified showCompletion method
+            showCompletion() {
+                this.stopSpeech();
+                this.courseCompleted = true;
+                
+                document.getElementById('contentTitle').textContent = '🎓 Congratulations!';
+                document.getElementById('contentText').innerHTML = `
+                    <div class="highlight-box">
+                        <h3>Course Completed Successfully!</h3>
+                        <p>You have mastered the fundamentals of this course.</p>
+                        <p>Check your dashboard for overall progress and select another course to continue learning.</p>
+                    </div>
+                `;
+
+                // Hide Next button and show Review button
+                document.getElementById('nextBtn').style.display = 'none';
+                document.getElementById('prevBtn').textContent = '🔄 Review Course';
+                document.getElementById('prevBtn').disabled = false;
+                
+                // Add special handler for review functionality
+                const prevBtn = document.getElementById('prevBtn');
+                
+                // Remove existing event listeners and add new one for review
+                const newPrevBtn = prevBtn.cloneNode(true);
+                prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
+                
+                newPrevBtn.addEventListener('click', () => this.reviewCourse());
+                
+                document.getElementById('interactiveContent').innerHTML = '';
+                this.hideExercise();
+                this.updateProgress();
+                this.saveProgress();
+            }
+
+            reviewCourse() {
+                // Reset to first chunk
+                this.currentChunk = 0;
+                this.currentSubChunk = 0;
+                this.courseCompleted = false; // Reset completion status for navigation
+                
+                // Display the first sub-chunk
+                this.displayCurrentSubChunk();
+                
+                // Restore normal navigation buttons
+                document.getElementById('nextBtn').style.display = 'inline-flex';
+                document.getElementById('nextBtn').textContent = 'Next ▶';
+                document.getElementById('prevBtn').textContent = '◀ Previous';
+                
+                // Remove the special review handler and restore normal navigation
+                const prevBtn = document.getElementById('prevBtn');
+                const newPrevBtn = prevBtn.cloneNode(true);
+                prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
+                
+                newPrevBtn.addEventListener('click', () => this.prevSubChunk());
+                
+                // Update buttons to reflect current position
+                this.updateButtons();
+            }
+
+            // Debug method for voices (can be called from browser console)
+            debugVoices() {
+                console.log('=== Voice Debug Information ===');
+                console.log('Total voices available:', this.voices.length);
+                
+                const voicesByLang = {};
+                this.voices.forEach(voice => {
+                    const lang = voice.lang.split('-')[0];
+                    if (!voicesByLang[lang]) voicesByLang[lang] = [];
+                    voicesByLang[lang].push(voice.name);
+                });
+                
+                Object.keys(voicesByLang).sort().forEach(lang => {
+                    console.log(`${lang.toUpperCase()} voices:`, voicesByLang[lang]);
+                });
+                
+                // Check for Natural voices by language
+                const naturalVoices = this.voices.filter(v => v.name.toLowerCase().includes('natural'));
+                console.log('All Natural voices:', naturalVoices.map(v => `${v.name} (${v.lang})`));
+                
+                // Language-specific Natural voices
+                ['en-US', 'ja-JP', 'vi-VN'].forEach(lang => {
+                    const langNaturalVoices = naturalVoices.filter(v => {
+                        const voiceLang = v.lang.toLowerCase();
+                        const langLower = lang.toLowerCase();
+                        return voiceLang.includes(langLower) || voiceLang.includes(langLower.replace('-', '_'));
+                    });
+                    console.log(`Natural ${lang} voices:`, langNaturalVoices.map(v => v.name));
+                });
+            }
+        }
+
+        // Initialize the game when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            const gameController = new StudyGameController();
+            
+            // Make debug method available globally
+            window.debugVoices = () => gameController.debugVoices();
+            
+            console.log('💡 Tip: Type "debugVoices()" in console to see all available voices');
+        });
+    </script>
+</body>
+</html>
