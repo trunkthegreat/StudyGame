@@ -170,7 +170,30 @@
             color: var(--cbre-accent-gold);
             margin-left: 0.25rem;
         }
-
+        
+        .course-welcome {
+            animation: fadeInSlide 1s ease;
+        }
+        
+        .course-welcome .highlight-box {
+            margin: 1.5rem 0;
+        }
+        
+        .course-welcome .highlight-box h3 {
+            color: var(--cbre-accent-gold);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        .course-welcome .highlight-box ul {
+            margin-left: 1rem;
+        }
+        
+        .course-welcome .highlight-box li {
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
         .course-count {
             background: rgba(255, 215, 0, 0.2);
             padding: 0.2rem 0.5rem;
@@ -573,7 +596,6 @@
             margin-top: 0.25rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
         .audio-slider {
             width: 100%;
             accent-color: var(--cbre-orange);
@@ -2154,9 +2176,67 @@
                 if (!this.courseData) return;
                 
                 document.getElementById('contentTitle').textContent = this.courseData.course_title;
-                document.getElementById('contentText').innerHTML = '<p>Ready to continue your learning journey. Use the Start or Resume button to begin.</p>';
+                
+                // Generate content with learning objectives and prerequisites
+                let welcomeContent = '<div class="course-welcome">';
+                
+                // Add learning objectives if they exist
+                if (this.courseData.learning_objectives && this.courseData.learning_objectives.length > 0) {
+                    welcomeContent += '<div class="highlight-box">';
+                    welcomeContent += '<h3>🎯 Learning Objectives:</h3>';
+                    welcomeContent += '<ul class="content-list">';
+                    this.courseData.learning_objectives.forEach(objective => {
+                        welcomeContent += `<li>${objective}</li>`;
+                    });
+                    welcomeContent += '</ul></div>';
+                }
+                
+                // Add prerequisites if they exist
+                if (this.courseData.prerequisites && this.courseData.prerequisites.length > 0) {
+                    welcomeContent += '<div class="highlight-box">';
+                    welcomeContent += '<h3>📋 Prerequisites:</h3>';
+                    welcomeContent += '<ul class="content-list">';
+                    this.courseData.prerequisites.forEach(prerequisite => {
+                        welcomeContent += `<li>${prerequisite}</li>`;
+                    });
+                    welcomeContent += '</ul></div>';
+                }
+                
+                // Add welcome message
+                welcomeContent += '<p><strong>Ready to begin your learning journey!</strong></p>';
+                welcomeContent += '<p>Use the Start or Resume button to begin studying this course.</p>';
+                welcomeContent += '</div>';
+                
+                document.getElementById('contentText').innerHTML = welcomeContent;
                 document.getElementById('progressText').textContent = 'Course selected - ready to begin';
                 document.getElementById('interactiveContent').innerHTML = '';
+                
+                // Auto-play TTS for course introduction
+                if (this.isAutoPlayEnabled) {
+                    setTimeout(() => this.playWelcomeNarration(), 1000);
+                }
+            }
+
+            playWelcomeNarration() {
+                if (!this.courseData) return;
+                
+                let narrativeText = `Welcome to ${this.courseData.course_title}. `;
+                
+                // Add learning objectives to narration
+                if (this.courseData.learning_objectives && this.courseData.learning_objectives.length > 0) {
+                    narrativeText += 'The learning objectives for this course are: ';
+                    narrativeText += this.courseData.learning_objectives.join('. ') + '. ';
+                }
+                
+                // Add prerequisites to narration
+                if (this.courseData.prerequisites && this.courseData.prerequisites.length > 0) {
+                    narrativeText += 'Before starting, please ensure you have the following prerequisites: ';
+                    narrativeText += this.courseData.prerequisites.join('. ') + '. ';
+                }
+                
+                narrativeText += 'You are now ready to begin your learning journey. Use the Start or Resume button when you are ready.';
+                
+                this.speakText(narrativeText, true);
             }
 
             displayCurrentSubChunk() {
